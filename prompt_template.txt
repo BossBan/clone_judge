@@ -1,11 +1,11 @@
-Please determine whether the following two code snippets are code clones based on the definitions below:
+Determine whether the following two code snippets are code clones based on the definitions below:
 
 1. Exact Clone: The two code snippets are identical except for comments and whitespace.
 2. Renamed Clone: The code is identical except for changes in variable, type, literal, or function names.
-3. Near-Miss Clone: The code is similar to Type-2 but with some statements added, deleted, or modified, or with layout changes.
+3. Near-Miss Clone: The code is similar to Renamed Clone but with some statements added, deleted, or modified, or with layout changes.
 4. Semantic Clone: The two code snippets implement the same functionality but in different ways.
 
-If any of the above clone types apply, answer "TRUE", else "FALSE".
+If any of the above clone types apply, answer "TRUE", else "FALSE". DO NOT PROVIDE ANY EXPLANATION OR JUSTIFICATION, ONLY ANSWER "TRUE" OR "FALSE".
 
 Code Snippet 1:
 ```

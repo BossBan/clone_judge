@@ -6,7 +6,7 @@ class CloneChecker:
     def __init__(
         self,
         api_key: str,
-        timeout: int = 300,
+        timeout: int = 60,
         concurrency_limit: int = 200,
         prompt_file: str = "prompt_template.txt",
     ):
@@ -43,7 +43,7 @@ class CloneChecker:
             if res and res.choices:
                 content = res.choices[0].message.content.strip().upper()
                 # DEBUG: print the raw content
-                print(f"DEBUG: Model response content: {content}")
+                # print(f"DEBUG: Model response content: {content}")
                 if "TRUE" in content:
                     return True
                 return False
@@ -59,7 +59,7 @@ class CloneChecker:
             )
             return list(results)
         except asyncio.TimeoutError:
-            # 取消所有未完成的任务
+            # Cancel any pending tasks if timeout occurs
             for t in tasks:
                 if not t.done():
                     t.cancel()
