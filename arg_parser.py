@@ -19,9 +19,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--api-key",
-        default=os.getenv(
-            "ZHIPUAI_API_KEY", "f53c763c7c4c498e884cd3c3ebec8ca2.1IOwLwLi105s6tCe"
-        ),
+        default=os.getenv("ZHIPUAI_API_KEY", ""),
         help="Zhipu AI API key.",
     )
     parser.add_argument(

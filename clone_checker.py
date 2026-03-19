@@ -41,12 +41,19 @@ class CloneChecker:
             )
 
             if res and res.choices:
-                content = res.choices[0].message.content.strip().upper()
+                content = res.choices[0].message.content.strip()
                 # DEBUG: print the raw content
                 # print(f"DEBUG: Model response content: {content}")
-                if "TRUE" in content:
-                    return True
-                return False
+                import re
+
+                match = re.search(r'clone_type\s*:\s*"?(\d)', content)
+                if match:
+                    clone_type = match.group(1)
+                    return clone_type != "0"
+
+                raise ValueError(f"Unexpected model response format: {content}")
+            else:
+                raise ValueError("No response from model or empty choices.")
 
     async def check(self, pairs: list[tuple[str, str]]) -> list:
         """
