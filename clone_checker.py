@@ -14,7 +14,7 @@ class CloneChecker:
         Initialize the CloneChecker.
 
         Args:
-            api_key (str, optional): The Zhipu AI API Key. If not provided, it will be read from the ZHIPUAI_API_KEY environment variable.
+            api_key (str, optional): The Zhipu AI API Key. If not provided, it will be read from the ZAI_API_KEY environment variable.
             timeout (int, optional): Overall timeout (seconds) for batch checks.
             concurrency_limit (int, optional): limit for concurrent api calls.
             prompt_file (str, optional): path to the prompt template file.
@@ -29,8 +29,8 @@ class CloneChecker:
             self.prompt_template = f.read()
 
     async def _check_is_clone(self, code1: str, code2: str) -> bool:
-        prompt = self.prompt_template.format(code1=code1, code2=code2)
-        model = "glm-4-flash"
+        prompt = self.prompt_template.replace("{{code1}}", code1).replace("{{code2}}", code2)
+        model = "glm-4-flashx"
 
         async with self.semaphore:
             res = await asyncio.to_thread(
@@ -46,7 +46,7 @@ class CloneChecker:
                 # print(f"DEBUG: Model response content: {content}")
                 import re
 
-                match = re.search(r'clone_type\s*:\s*"?(\d)', content)
+                match = re.search(r'"?clone_type"?\s*:\s*"?(\d)', content)
                 if match:
                     clone_type = match.group(1)
                     return clone_type != "0"

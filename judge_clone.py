@@ -94,12 +94,6 @@ def is_row_processed(row: List[str]) -> bool:
     return len(row) >= 9 and row[8] in ("TRUE", "FALSE")
 
 
-def write_csv(csv_path: Path, rows: List[List[str]]) -> None:
-    tmp_path = csv_path.with_name(csv_path.name + ".tmp")
-    with open(tmp_path, "w", encoding="utf-8", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerows(rows)
-    tmp_path.replace(csv_path)
 
 
 async def process_chunk(
@@ -127,12 +121,24 @@ async def process_chunk(
             code1, code2 = extract_codes_for_row(rows[idx], file_index)
             pairs.append((code1, code2))
 
-        try:
-            results = await checker.check(pairs)
-        except Exception as exc:
-            for idx in batch_indices:
-                set_row_verdict(rows[idx], "ERROR")
-            print(f"batch_check_failed: {exc}")
+        max_retries = 3
+        results = None
+        for attempt in range(max_retries):
+            try:
+                results = await checker.check(pairs)
+                break
+            except Exception as exc:
+                if attempt < max_retries - 1 and ("429" in str(exc) or "速率限制" in str(exc)):
+                    wait_time = 5 * (2 ** attempt)
+                    print(f"Rate limit hit. Retrying in {wait_time}s... (Attempt {attempt+1}/{max_retries})")
+                    await asyncio.sleep(wait_time)
+                else:
+                    for idx in batch_indices:
+                        set_row_verdict(rows[idx], "ERROR")
+                    print(f"batch_check_failed: {exc}")
+                    break
+        
+        if results is None:
             continue
 
         for idx, result in zip(batch_indices, results):
@@ -171,7 +177,6 @@ async def process_one_csv(
                 file_index=file_index,
                 batch_size=batch_size,
             )
-            write_csv(csv_path, rows)
 
             processed += len(chunk_indices)
             percent = (
@@ -190,7 +195,6 @@ async def process_one_csv(
             file_index=file_index,
             batch_size=batch_size,
         )
-        write_csv(csv_path, rows)
 
         processed += len(chunk_indices)
         percent = (processed / total_unprocessed * 100) if total_unprocessed else 100.0
@@ -224,7 +228,7 @@ async def main() -> None:
     args = parse_args()
 
     if not args.api_key:
-        raise ValueError("API key is required. Use --api-key or set ZHIPUAI_API_KEY.")
+        raise ValueError("API key is required. Use --api-key or set ZAI_API_KEY.")
 
     data_dir = getattr(args, "code_dir", getattr(args, "data_dir", Path("data")))
     bcb_dir = data_dir / "bcb_reduced"
@@ -254,12 +258,18 @@ async def main() -> None:
 
     for csv_path in input_csv_files:
         with open(csv_path, "r", encoding="utf-8", newline="") as f:
-            all_rows = list(csv.reader(f))
-
-        if args.lines is not None and args.lines < len(all_rows):
-            selected_rows = random.sample(all_rows, args.lines)
-        else:
-            selected_rows = all_rows
+            reader = csv.reader(f)
+            if args.lines is not None:
+                selected_rows = []
+                for i, row in enumerate(reader):
+                    if i < args.lines:
+                        selected_rows.append(row)
+                    else:
+                        j = random.randint(0, i)
+                        if j < args.lines:
+                            selected_rows[j] = row
+            else:
+                selected_rows = list(reader)
 
         filtered_csv_rows[csv_path.name] = selected_rows
 
@@ -302,7 +312,7 @@ async def main() -> None:
                 f"ERROR: failed processing {csv_path.name}, continue next file: {exc}"
             )
 
-    print("All done. Results written back to CSV files.")
+    print("All done.")
 
 
 if __name__ == "__main__":
